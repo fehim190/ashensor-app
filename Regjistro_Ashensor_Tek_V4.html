@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+    <meta charset="UTF-8">
+    <title>Regjistrimi i Ashensorëve</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        h1 { text-align: center; }
+        form { background-color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0 10px; }
+        button { padding: 10px 20px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; background-color: #fff; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #eee; }
+        .actions button { margin-right: 5px; }
+        img { max-width: 50px; height: auto; }
+    </style>
+</head>
+<body>
+
+<h1>Regjistrimi i Ashensorëve</h1>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="vendosLloj('defekt')" style="background-color: red; color: white;">Regjistro Ashensor Defekt</button>
+    <button onclick="vendosLloj('mirembajtje')" style="background-color: gold;">Regjistro Ashensor për Mirëmbajtje</button>
+</div>
+
+<form id="servisForm">
+    <input type="hidden" id="llojiAshensorit">
+    <label>Emri:</label>
+    <input type="text" id="emri" required>
+    <label>Mbiemri:</label>
+    <input type="text" id="mbiemri" required>
+    <label>Numri i Telefonit:</label>
+    <input type="tel" id="telefoni" required>
+    <label>Rruga:</label>
+    <input type="text" id="rruga" required>
+    <label>Lloji i Ashensorit:</label>
+    <input type="text" id="lloji" required>
+    <label>Emri i Ashensorit:</label>
+    <input type="text" id="ashensori" required>
+    <label>Përshkrimi i Problemit:</label>
+    <textarea id="problemi" required></textarea>
+    <label>Ngarko Foto (nëse ka):</label>
+    <input type="file" id="foto" accept="image/*">
+    <button type="submit">Regjistro</button>
+</form>
+
+<table id="dataTable">
+    <thead>
+        <tr>
+            <th>Emri</th><th>Mbiemri</th><th>Telefoni</th><th>Rruga</th><th>Lloji</th><th>Ashensori</th><th>Problemi</th><th>Statusi</th><th>Koment</th><th>Foto</th><th>Lloji</th><th>Veprime</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+let data = JSON.parse(localStorage.getItem("ashensoretServis") || "[]");
+
+function ruajTeDhenat() {
+    localStorage.setItem("ashensoretServis", JSON.stringify(data));
+}
+
+function rifreskoTabelen() {
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach((e, index) => {
+        let rowColor = "";
+        if (e.llojiFormulari === "defekt") {
+            rowColor = e.statusi === "Jo e kryer" ? "style='background-color: #ffcccc;'" :
+                       e.statusi === "E përfunduar" ? "style='background-color: #add8e6;'" : "";
+        } else if (e.llojiFormulari === "mirembajtje") {
+            rowColor = e.statusi === "Jo e kryer" ? "style='background-color: #fffacd;'" :
+                       e.statusi === "E përfunduar" ? "style='background-color: #add8e6;'" : "";
+        }
+
+        const row = `<tr ${rowColor}>
+            <td>${e.emri}</td><td>${e.mbiemri}</td><td>${e.telefoni}</td><td>${e.rruga}</td><td>${e.lloji}</td>
+            <td>${e.ashensori}</td><td>${e.problemi}</td><td>${e.statusi}</td><td>${e.koment || ""}</td>
+            <td>${e.foto ? `<img src="${e.foto}">` : "Pa foto"}</td>
+            <td>${e.llojiFormulari === 'defekt' ? 'Defekt' : 'Mirëmbajtje'}</td><td class="actions">
+                <button onclick="ndryshoStatus(${index})">Ndrysho Statusin</button>
+                <button onclick="fshi(${index})">Fshi</button>
+            </td>
+        </tr>`;
+        tbody.innerHTML += row;
+    });
+}
+
+function ndryshoStatus(index) {
+    const komenti = prompt("Shkruaj çfarë është rregulluar ose koment për mirëmbajtjen:");
+    if (komenti !== null) {
+        data[index].koment = komenti;
+        data[index].statusi = "E përfunduar";
+        ruajTeDhenat();
+        rifreskoTabelen();
+    }
+}
+
+function fshi(index) {
+    if (confirm("A jeni i sigurt që doni ta fshini këtë hyrje?")) {
+        data.splice(index, 1);
+        ruajTeDhenat();
+        rifreskoTabelen();
+    }
+}
+
+function vendosLloj(lloji) {
+    document.getElementById("llojiAshensorit").value = lloji;
+}
+
+document.getElementById("servisForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const i = id => document.getElementById(id).value;
+    const fileInput = document.getElementById("foto");
+    const file = fileInput.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            shtoTeDhena(reader.result);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        shtoTeDhena(null);
+    }
+
+    function shtoTeDhena(fotoData) {
+        data.push({
+            emri: i("emri"),
+            mbiemri: i("mbiemri"),
+            telefoni: i("telefoni"),
+            rruga: i("rruga"),
+            lloji: i("lloji"),
+            ashensori: i("ashensori"),
+            problemi: i("problemi"),
+            statusi: "Jo e kryer",
+            koment: "",
+            llojiFormulari: i("llojiAshensorit"),
+            foto: fotoData
+        });
+        ruajTeDhenat();
+        rifreskoTabelen();
+        document.getElementById("servisForm").reset();
+    }
+});
+
+rifreskoTabelen();
+</script>
+
+</body>
+</html>
